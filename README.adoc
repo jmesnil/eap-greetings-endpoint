@@ -1,0 +1,8 @@
+
+```
+$ mvn clean package -Pbootable-jar
+
+$ java -jar target/greetings-endpoint-bootable.jar
+```
+
+
