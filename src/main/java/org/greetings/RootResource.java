@@ -30,7 +30,7 @@ import javax.ws.rs.core.MediaType;
 @Path("/")
 public class RootResource {
 
- 
+
  @GET
  @Produces(MediaType.TEXT_PLAIN)
  public String getRootResponse(@QueryParam("kind") String kind, @QueryParam("message") String message) {
