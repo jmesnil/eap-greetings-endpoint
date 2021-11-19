@@ -3,6 +3,8 @@
 $ mvn clean package -Pbootable-jar
 
 $ java -jar target/greetings-endpoint-bootable.jar
+
+$ curl http://localhost:8080/openapi
+
+$ curl -s http://localhost:8080?message="hello"&kind="greetings"
 ```
-
-
