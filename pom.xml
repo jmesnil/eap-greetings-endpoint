@@ -11,65 +11,164 @@
   <name>greetings-endpoint</name>
   <!-- FIXME change it to the project's website -->
   <url>http://www.example.com</url>
+  <packaging>war</packaging>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <maven.compiler.source>1.7</maven.compiler.source>
-    <maven.compiler.target>1.7</maven.compiler.target>
+    <maven.compiler.source>11</maven.compiler.source>
+    <maven.compiler.target>11</maven.compiler.target>
+    <version.server.bom>7.4.0.GA</version.server.bom>
+    <version.microprofile.bom>3.0.0.GA</version.microprofile.bom>
+    <version.server.bootable-jar>3.0.0.GA-redhat-00004</version.server.bootable-jar>
+    <version.wildfly-jar.maven.plugin>4.0.3.Final-redhat-00001</version.wildfly-jar.maven.plugin>
+    <version.jkube.maven.plugin>1.0.1</version.jkube.maven.plugin>
+    <jkube.generator.from>registry.redhat.io/ubi8/openjdk-11:latest</jkube.generator.from>
+    <!-- Protocol to use for communication with remote maven repositories.
+             You can set to 'http' if you are using a maven proxy and 'https'
+             interferes with that. Use 'https' for builds that will be released
+             to non-snapshot public maven repos -->
+    <maven.repository.protocol>https</maven.repository.protocol>
+    <!-- The full remote maven repo URL; can be overridden via -D for special use cases -->
+    <maven.repository.url>${maven.repository.protocol}://repository.jboss.org/nexus/content/groups/public/</maven.repository.url>
+    <!-- https://access.redhat.com/maven-repository -->
+    <maven.redhat.repository.url>${maven.repository.protocol}://maven.repository.redhat.com/ga/</maven.redhat.repository.url>
+
   </properties>
 
+  <dependencyManagement>
+    <dependencies>
+      <!-- importing the jakartaee8-with-tools BOM adds specs and other useful artifacts as managed dependencies -->
+      <dependency>
+        <groupId>org.jboss.bom</groupId>
+        <artifactId>jboss-eap-jakartaee8-with-tools</artifactId>
+        <version>${version.server.bom}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <!-- importing the microprofile BOM adds MicroProfile specs -->
+      <dependency>
+        <groupId>org.jboss.bom</groupId>
+        <artifactId>jboss-eap-xp-microprofile</artifactId>
+        <version>${version.microprofile.bom}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
   <dependencies>
+
+    <!-- importing the jakartaee8-with-tools BOM adds specs and other useful artifacts as managed dependencies -->
+    <!-- importing the microprofile BOM adds MicroProfile specs -->
     <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <version>4.11</version>
-      <scope>test</scope>
+      <groupId>org.eclipse.microprofile.openapi</groupId>
+      <artifactId>microprofile-openapi-api</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.jboss.spec.javax.ws.rs</groupId>
+      <artifactId>jboss-jaxrs-api_2.1_spec</artifactId>
+      <scope>provided</scope>
     </dependency>
   </dependencies>
 
   <build>
-    <pluginManagement><!-- lock down plugins versions to avoid using Maven defaults (may be moved to parent pom) -->
-      <plugins>
-        <!-- clean lifecycle, see https://maven.apache.org/ref/current/maven-core/lifecycles.html#clean_Lifecycle -->
-        <plugin>
-          <artifactId>maven-clean-plugin</artifactId>
-          <version>3.1.0</version>
-        </plugin>
-        <!-- default lifecycle, jar packaging: see https://maven.apache.org/ref/current/maven-core/default-bindings.html#Plugin_bindings_for_jar_packaging -->
-        <plugin>
-          <artifactId>maven-resources-plugin</artifactId>
-          <version>3.0.2</version>
-        </plugin>
-        <plugin>
-          <artifactId>maven-compiler-plugin</artifactId>
-          <version>3.8.0</version>
-        </plugin>
-        <plugin>
-          <artifactId>maven-surefire-plugin</artifactId>
-          <version>2.22.1</version>
-        </plugin>
-        <plugin>
-          <artifactId>maven-jar-plugin</artifactId>
-          <version>3.0.2</version>
-        </plugin>
-        <plugin>
-          <artifactId>maven-install-plugin</artifactId>
-          <version>2.5.2</version>
-        </plugin>
-        <plugin>
-          <artifactId>maven-deploy-plugin</artifactId>
-          <version>2.8.2</version>
-        </plugin>
-        <!-- site lifecycle, see https://maven.apache.org/ref/current/maven-core/lifecycles.html#site_Lifecycle -->
-        <plugin>
-          <artifactId>maven-site-plugin</artifactId>
-          <version>3.7.1</version>
-        </plugin>
-        <plugin>
-          <artifactId>maven-project-info-reports-plugin</artifactId>
-          <version>3.0.0</version>
-        </plugin>
-      </plugins>
-    </pluginManagement>
+    <!-- Set the name of the archive -->
+    <finalName>${project.artifactId}</finalName>
+    <plugins>
+      <plugin>
+        <groupId>org.wildfly.plugins</groupId>
+        <artifactId>wildfly-maven-plugin</artifactId>
+        <version>${version.wildfly-jar.maven.plugin}</version>
+      </plugin>
+    </plugins>
   </build>
+
+  <profiles>
+    <profile>
+      <id>bootable-jar</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.wildfly.plugins</groupId>
+            <artifactId>wildfly-jar-maven-plugin</artifactId>
+            <version>${version.wildfly-jar.maven.plugin}</version>
+            <configuration>
+              <feature-pack-location>org.jboss.eap:wildfly-galleon-pack:${version.server.bootable-jar}</feature-pack-location>
+              <layers>
+                <layer>jaxrs-server</layer>
+                <layer>microprofile-platform</layer>
+              </layers>
+              <plugin-options>
+                <jboss-fork-embedded>true</jboss-fork-embedded>
+              </plugin-options>
+            </configuration>
+            <executions>
+              <execution>
+                <goals>
+                  <goal>package</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+
+  <repositories>
+    <repository>
+      <releases>
+        <enabled>true</enabled>
+        <updatePolicy>never</updatePolicy>
+      </releases>
+      <snapshots>
+        <enabled>true</enabled>
+        <updatePolicy>never</updatePolicy>
+      </snapshots>
+      <id>jboss-public-repository-group</id>
+      <name>JBoss Public Repository Group</name>
+      <url>${maven.repository.url}</url>
+      <layout>default</layout>
+    </repository>
+    <repository>
+      <releases>
+        <enabled>true</enabled>
+        <updatePolicy>never</updatePolicy>
+      </releases>
+      <snapshots>
+        <enabled>true</enabled>
+        <updatePolicy>never</updatePolicy>
+      </snapshots>
+      <id>jboss-enterprise-maven-repository</id>
+      <name>JBoss Enterprise Maven Repository</name>
+      <url>${maven.redhat.repository.url}</url>
+      <layout>default</layout>
+    </repository>
+  </repositories>
+
+  <pluginRepositories>
+    <pluginRepository>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+      <snapshots>
+        <enabled>true</enabled>
+      </snapshots>
+      <id>jboss-public-repository-group</id>
+      <name>JBoss Public Repository Group</name>
+      <url>${maven.repository.url}</url>
+    </pluginRepository>
+    <pluginRepository>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+      <snapshots>
+        <enabled>true</enabled>
+      </snapshots>
+      <id>jboss-enterprise-maven-repository</id>
+      <name>JBoss Enterprise Maven Repository</name>
+      <url>${maven.redhat.repository.url}</url>
+    </pluginRepository>
+  </pluginRepositories>
+
 </project>
